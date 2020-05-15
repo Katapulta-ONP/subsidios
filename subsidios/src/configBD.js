@@ -4,7 +4,7 @@ import 'firebase/firebase-database'
 const firebaseConfig = {
     apiKey: "AIzaSyDVMS3AinOFyQv7Cq_bFIgAD2avd_Dk5pU",
     authDomain: "pruebas-onp-e3487.firebaseapp.com",
-    databaseURL: "https://pruebas-onp-e3487.firebaseio.com",
+    databaseURL: "https://pruebas-onp-subsidio.firebaseio.com/",
     projectId: "pruebas-onp-e3487",
     storageBucket: "pruebas-onp-e3487.appspot.com",
     messagingSenderId: "51552745500",
@@ -12,7 +12,8 @@ const firebaseConfig = {
     measurementId: "G-RESJ9NWK6C"
 }
 
-
-
-export const fire = firebase.initializeApp(firebaseConfig);
-export const fireDataBase = firebase.database();
+const fire = firebase.initializeApp(firebaseConfig);
+const firebaseBase = firebase.database();
+const fireDataBase1 = fire.database("https://pruebas-onp-subsidio1.firebaseio.com/");
+const fireDataBase2 = fire.database("https://pruebas-onp-subsidio2.firebaseio.com/");
+export const fireDataBases = [fireDataBase1, fireDataBase2]

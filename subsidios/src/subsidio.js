@@ -1,6 +1,6 @@
 import React, {useState} from 'react'
-import {Form, Button, Container, Col, Row, Modal} from 'react-bootstrap'
-import {fireDataBase} from './configBD'
+import {Form, Button, Container, Col, Row, Modal, Spinner} from 'react-bootstrap'
+import {fireDataBases} from './configBD'
 //reCaptcha
 import ReCAPTCHA from "react-google-recaptcha";
 
@@ -13,11 +13,17 @@ const typeDoc = [
 
 const Options = (props) =>{
   return props.options.map((ele, index)=>
-      <option value={ele} key={index}>{ele}</option>)
+      <option value={index} key={index}>{ele}</option>)
 }
 
 const Result = (props) =>{
   return (props.result ? <h1> Felicidades eres beneficioario del subsidio</h1> : <h1>Lo sentimos, por el momento no eres beneficiario</h1>)
+}
+
+const Load = (props) => {
+  return (
+    <div><Spinner animation="border" /><strong> Cargando ... </strong></div>
+  )
 }
 
 const Subsidio =()=>{
@@ -32,8 +38,8 @@ const Subsidio =()=>{
     setResult(false);
   };
   const handleShow = () => {
-    setShow(true);
-    validateBD();
+
+    validateBdFilter();
   }
 
   const onChange = (value) =>{
@@ -46,44 +52,72 @@ const Subsidio =()=>{
     setBdValue({...bdValue,[id]:value});
   }
 
-  const validateBD = () =>{
-    fireDataBase.ref('subsidio/').on('value',(snap)=>{
-      const arrays = snap.val();
-      Object.keys(arrays).map(obj=>{
-        const resultArray =  Object.keys({...arrays[obj]}).map(obj1 => {
-          let auxResult=false;
-          console.log("form: "+bdValue[obj1]);
-          if(arrays[obj][obj1] === bdValue[obj1]) auxResult = true;
-          return auxResult;
+const validateBdFilter = () =>{
+
+  const keysForm = Object.keys(bdValue).map(ele=>ele);
+  const bdNames = ["beneficiadosPart1/","beneficiadosPart2/"] 
+
+  const promises = fireDataBases.map((fireDataBase, index) =>{
+    return new Promise((resolve, reject)=>{
+      try{
+        return fireDataBase.ref(bdNames[index])
+        .orderByChild(keysForm[2])
+        .equalTo(bdValue[keysForm[2]])
+        .on("value",
+        (snapshots)=>{
+          let resultadosFinal = [];
+          let resultadoFinal = 0;
+  
+            if(snapshots.val()){
+              snapshots.forEach((snapshot)=>{
+                resultadosFinal.push(
+                  Object.keys(bdValue).reduce((aux, ele)=>{
+                  return (bdValue[ele]===snapshot.val()[ele] ? aux* true: aux *false)
+                  }, true)
+                )
+              });
+              resultadoFinal = resultadosFinal.reduce((aux, ele)=>{return ele + aux}, false);
+            }
+            
+            resolve(resultadoFinal);
+        },
+        (error)=>{
+          // console.log("La lectura fallo"+ error.code)
         })
-        
-        const resultadoFinal = resultArray.reduce((aux, ele)=>{
-          return aux*ele;
-        }, true)
-        
-        if(resultadoFinal === 1) setResult(true);
-      })
-    });
-  }
+      }
+      catch{
+        reject(`Hubo un problema`)
+      }
+    })
+  })
+
+  Promise.all(promises).then(results=>{
+    const resultadoFinalFinal = results.reduce((aux, ele)=>{return ele + aux}, false);
+    setResult(resultadoFinalFinal);
+    setShow(true);
+  }).catch(reason =>{
+    // console.log("error: "+reason);
+  })
+}
 
 return(
   <Container>
     <Row className="justify-content-md-center">
       <Col sm={4}>
       <Form onChange={changeForm}>
-        <Form.Group controlId="docType">
+        <Form.Group controlId="TI_DOCU_IDEN">
           <Form.Label>Tipo de documento:</Form.Label>
           <Form.Control as="select">
             <Options options={typeDoc}></Options>
           </Form.Control>
         </Form.Group>
 
-        <Form.Group controlId="numeroDoc">
+        <Form.Group controlId="NU_DOCU_IDEN">
           <Form.Label>Número de documento:</Form.Label>
           <Form.Control type="number"/>
         </Form.Group>
 
-        <Form.Group controlId="fecha">
+        <Form.Group controlId="FE_EMIS_DOCU_IDEN">
           <Form.Label>Fecha de emision del DNI</Form.Label>
           <Form.Control type="date" />
         </Form.Group>
